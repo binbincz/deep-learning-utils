@@ -1,0 +1,216 @@
+import os
+from shutil import copyfile
+import traceback
+import logger
+'''=================================================
+@Author   : JunBin Yuan
+@Date     ：2020/03/06
+@Version  ：0.1
+@Desc   ：主要用于找出A模型里面识别失败的内容，是否在B模型中识别成功。
+=================================================='''
+
+class image_info:
+    def __init__(self, file_path, file_name, origin_file_name, score, img_type, file_name_no_score=None):
+        self.file_path = file_path
+        self.file_name = file_name
+        self.origin_file_name = origin_file_name
+        # self.file_name_no_score = file_name_no_score
+        self.score = score
+        # self.key = key_name
+        self.type = img_type
+
+    def __str__(self):
+        image_map = {}
+        image_map['file_path'] = self.file_path
+        image_map['file_name'] = self.file_name
+        image_map['origin_file_name'] = self.origin_file_name
+        image_map['score'] = self.score
+        return image_map
+
+
+# def get_image_info_map_special(model_result_file_list, image_path_prex):
+#     model_map = {}
+#     for file_name in model_result_file_list:
+#         file_name = file_name
+#         tmp_file_names = file_name.split("_")
+#         tmp = file_name.replace(tmp_file_names[0],'')
+#         tmp = tmp.replace(tmp_file_names[-1],'')
+#         tmp = tmp[1:-1]
+#         origin_file_name = tmp
+#         score = tmp_file_names[0]
+#         if score == 'nan':
+#             print("image no score ", image_path_prex, " ", file_name)
+#             break
+#         model_map[tmp] = image_info(image_path_prex+file_name, file_name, origin_file_name, score, tmp)
+#     return model_map
+
+
+def get_image_info_map(model_result_file_list, image_path_prex):
+    model_map = {}
+    for file_name in model_result_file_list:
+        file_name = file_name
+        tmp_file_names = file_name.split("_")
+        # 去掉分数
+        tmp = file_name.replace(tmp_file_names[0] + "_", '')
+        # 去掉最后标号
+        tmp = tmp.replace("_" + tmp_file_names[-1], '')
+        # # 去掉前后两条下划线
+        # tmp = tmp[1:-1]
+        # 获取图片类型 gt result
+        img_type = tmp_file_names[-2]
+        # 处理image 没有写上Image
+        if img_type != 'gt' and img_type != 'result' and img_type != 'image':
+            img_type = 'a'
+        else:
+            # 有image  需要去gt 或者result 可以兼容后期有image
+            tmp = tmp.replace("_" + tmp_file_names[-2], '')
+        origin_file_name = tmp
+        score = tmp_file_names[0]
+        if score == 'nan':
+            # print("image no score ",image_path_prex," ",file_name)
+            score = 0.00
+        model_map[origin_file_name] = image_info(image_path_prex + file_name, file_name, origin_file_name, score,
+                                                 img_type)
+    return model_map
+
+
+
+if __name__ == '__main__':
+    logger = logger.setup_logger("compare_error", "log/", 0)
+    compare_result_path_prex = r"/home/ihavc01/sod/compare_scrn_origin_assp1/fm/"
+    image_max_score = 0.1
+    threadshold = 0.5
+    # 比较CPD 与 SCRN
+    # model_2_result_path = r"C:/Users/yuan/Desktop/my_data_result/CDP-author/fm/"
+    # model_1_result_path = r"C:/Users/yuan/Desktop/lzy_data/SCRN/fm/"
+
+    # 比较CPD 与 my-EGNet
+    # model_2_result_path = r"C:/Users/yuan/Desktop/my_data_result/CDP-author/fm/"
+    # model_1_result_path = r"C:/Users/yuan/Desktop/my_data_result/EGNet-DUTS-TE__score_sort_/fm/"
+
+    # 比较CPD 与 lzy-EGNet
+    # model_2_result_path = r"C:/Users/yuan/Desktop/my_data_result/CDP-author/fm/"
+    # model_1_result_path = r"C:/Users/yuan/Desktop/lzy_data/EGN/fm/"
+
+    # 比较SCRN 与 lzy-EGNet
+    # model_2_result_path = r"C:/Users/yuan/Desktop/lzy_data/SCRN/fm/"
+    # model_1_result_path = r"C:/Users/yuan/Desktop/lzy_data/EGN/fm/"
+
+    # 比较SCRN  与  My_EGNet
+    # model_2_result_path = r"C:/Users/yuan/Desktop/lzy_data/SCRN/fm/"
+    # model_1_result_path = r"C:/Users/yuan/Desktop/my_data_result/EGNet-DUTS-TE__score_sort_/fm/"
+
+    # 比较EGNet 与  My_EGNet
+    # model_2_result_path =  r"C:/Users/yuan/Desktop/my_data_result/EGNet-DUTS-TE__score_sort_/fm/"
+    # model_1_result_path =r"C:/Users/yuan/Desktop/lzy_data/EGN/fm/"
+
+    # 比较CPD 与  My_CPD
+    # model_2_result_path = r"C:/Users/yuan/Desktop/my_data_result/CDP-author/fm/"
+    # model_1_result_path =r"C:/Users/yuan/Desktop/my_data_result/my_cpd/fm/"
+
+    # 比较 My_CPD  与  SCRN
+    # model_1_result_path = r"C:/Users/yuan/Desktop/lzy_data/SCRN/fm/"
+    # model_2_result_path =r"C:/Users/yuan/Desktop/my_data_result/my_cpd/fm/"
+
+    # 比较 My_CPD  与 lzy-egn
+    # model_1_result_path = r"C:/Users/yuan/Desktop/lzy_data/EGN/fm/"
+    # model_2_result_path =r"C:/Users/yuan/Desktop/my_data_result/my_cpd/fm/"
+
+    # 比较 SRCN  与 lzy-srcn
+    model1_name = "SRCN"
+    model2_name = "SRCN-ASPP"
+    model_1_result_path = r"/home/ihavc01/sod/SCRN-ASSP/result_new/scrn_res/DUTS-TR/DUTS-TE__score_sort/fm/"
+    model_2_result_path = r"/home/ihavc01/sod/SCRN-master/result_new/scrn_res/DUTS-TR/DUTS-TE__score_sort/fm/"
+
+    # # 比较 SRCN 与 lzy-srcn2
+    # model_2_result_path = r"C:/Users/yuan/Desktop/lzy_data/SCRN/fm/"
+    # model_1_result_path = r"C:/Users/yuan/Desktop/lzy_data/fm_SCRN_lzy2/"
+
+    # # 比较  lzy-srcn  与 lzy-srcn2
+    # model_2_result_path = r"C:/Users/yuan/Desktop/lzy_data/fm_SCRN_lzy2/"
+    # model_1_result_path = r"C:/Users/yuan/Desktop/lzy_data/fm_SCRN_lzy/"
+    #
+
+    # compare_result_path_better = compare_result_path_prex+"better/"
+    # compare_result_path_worse = compare_result_path_prex+"worse/"
+    # compare_result_path_equal = compare_result_path_prex+"equal/"
+    compare_result_path_best = compare_result_path_prex + model2_name+"-best-"+model1_name+"/"
+    # if not os.path.exists(compare_result_path_better):
+    #     os.makedirs(compare_result_path_better)
+    #
+    # if not os.path.exists(compare_result_path_worse):
+    #     os.makedirs(compare_result_path_worse)
+    #
+    # if not os.path.exists(compare_result_path_equal):
+    #     os.makedirs(compare_result_path_equal)
+    #
+    if not os.path.exists(compare_result_path_best):
+        os.makedirs(compare_result_path_best)
+
+    model_2_map = {}
+    compare_result_map = {}
+
+    m1_image_file_path_list = [x for x in os.listdir(model_1_result_path) if x.find("_0.") != -1]
+
+    m1_gt_file_path_list = [x for x in os.listdir(model_1_result_path) if x.find("gt") != -1 and x.find("_1") != -1]
+
+    m1_result_file_path_list = [x for x in os.listdir(model_1_result_path) if
+                                x.find("result") != -1 and x.find("_2") != -1]
+    m2_result_file_path_list = [x for x in os.listdir(model_2_result_path) if
+                                x.find("result") != -1 and x.find("_2") != -1]
+
+    model_1_map = get_image_info_map(m1_result_file_path_list, model_1_result_path)
+    model_2_map = get_image_info_map(m2_result_file_path_list, model_2_result_path)
+    image_map = get_image_info_map(m1_image_file_path_list, model_1_result_path)
+    gt_map = get_image_info_map(m1_gt_file_path_list, model_1_result_path)
+
+    i = 0
+    key_list = list(model_1_map.keys())
+    length = len(key_list)
+    compare_result_path = compare_result_path_best
+    num = 0
+    print("模型比较开始！")
+    for i in range(0, length):
+        # if i > 10:
+        #     print("运行限制，提前结束")
+        #     break;
+        key = key_list[i]
+        image1 = model_1_map[key]
+        try:
+            image2 = model_2_map[key]
+            img = image_map[key]
+            gt = gt_map[key]
+        except KeyError as e:
+            logger.error("KeyError ", e)
+            exstr = traceback.format_exc()
+            logger.error(exstr)
+            continue
+        image1_score =  float(image1.score)
+        different_value = image1_score - float(image2.score)
+
+        different_value = '%.2f' % different_value
+        new_file_name_prex = str(different_value) + "_"
+        # 由于图片得分不相等，所以分数只能放在后面，不然会导致相同图片无法相邻  window系统文件名排序是按照从前到后字符ascii值大小来排序
+        new_img_file_name = new_file_name_prex + img.origin_file_name + "_" + "a" + "_1_" + str(img.score) + ".jpg"
+        new_img_file_path = compare_result_path + new_img_file_name
+
+        new_gt_file_name = new_file_name_prex + gt.origin_file_name + "_" + gt.type + "_2_" + str(gt.score) + ".png"
+        new_gt_file_path = compare_result_path + new_gt_file_name
+        # 由于图片得分不相等，所以 两个模型的生成结果是可以需要进行区分的 即不用加入后缀 3 4
+        new_file_1_name = new_file_name_prex + image1.origin_file_name + "_" + image1.type + "_3_" + str(image1.score) + ".png"
+        new_file_1_path = compare_result_path + new_file_1_name
+
+        new_file_2_name = new_file_name_prex + image2.origin_file_name + "_" + image2.type + "_4_" + str(image2.score) + ".png"
+        new_file_2_path = compare_result_path + new_file_2_name
+
+
+        copyfile(image1.file_path, new_file_1_path)
+        copyfile(image2.file_path, new_file_2_path)
+        copyfile(img.file_path, new_img_file_path)
+        copyfile(gt.file_path, new_gt_file_path)
+
+    print("寻找模型1失败却在模型2成功的图片  模型1得分小于等于 [ ",image_max_score," ]分 且 分值区别大于等于 [ ",threadshold," ]分 的图片数量为 ",num)
+    print("模型1是 ",model_1_result_path," 模型2是 ",model_2_result_path)
+    print("比较结果存放路径是 "+compare_result_path_best)
+    print("Congratualtion!! Compare finished!!!")
+
