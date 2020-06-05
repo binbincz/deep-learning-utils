@@ -26,8 +26,8 @@ def save_img(self,image_path, gt_path, sod_result_path, score_compare_path, fm_m
 
     if not os.path.exists(score_compare_path):
         os.mkdir(score_compare_path)
-    print("fm_map.keys() is")
-    print(fm_map.keys())
+    # print("fm_map.keys() is")
+    # print(fm_map.keys())
     for dict in fm_map.keys():
         # print("dict is ==== ")
         # print(dict)
@@ -55,7 +55,8 @@ def save_img(self,image_path, gt_path, sod_result_path, score_compare_path, fm_m
 
 class Eval_thread():
 
-    def __init__(self, loader, model_name,  method,dataset, image_path, gt_path, result_path, fm_result_path, sm_result_path, cuda, logger=None, isNeedSort=True):
+    def __init__(self, loader, model_name, method, dataset, image_path, gt_path, result_path, score_image_save_path,
+                 cuda, logger=None, isNeedSort=True):
         self.loader = loader
         self.method = method
         self.dataset = dataset
@@ -64,10 +65,10 @@ class Eval_thread():
         self.image_path = image_path
         self.gt_path = gt_path
         self.result_path = result_path
-        self.fm_result_path = fm_result_path
-        self.sm_result_path = sm_result_path
+        self.fm_result_path = score_image_save_path + "/fm/"
+        self.sm_result_path = score_image_save_path + "/sm/"
         # 是否需要存储排序结果
-        self.isNeedSort= isNeedSort
+        self.isNeedSort = isNeedSort
         # self.logfile = os.path.join(output_dir, 'result.txt')
         if logger != None:
             self.logger_result = logger
